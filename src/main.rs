@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::ops::ControlFlow::Break;
-use std::path::Path;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::Normal;
 use plotters::backend::BitMapBackend;
-use plotters::chart::{self, ChartBuilder};
+use plotters::chart::ChartBuilder;
 use plotters::drawing::IntoDrawingArea;
 use plotters::element::{Circle, PathElement};
 use plotters::series::LineSeries;
@@ -15,11 +13,6 @@ use rand::seq::SliceRandom;
 use csv::ReaderBuilder;
 use ndarray::{Array, Array1, Array2, ArrayBase, Axis, Dimension, Zip, s};
 use ndarray_csv::Array2Reader;
-use ndarray_rand::rand::thread_rng;
-
-// use ndarray_rand::rand::{SeedableRng, rngs::StdRng};
-// use ndarray_rand::rand_distr::Normal;
-// use ndarray_rand::RandomExt;
 use ndarray_rand::rand::rngs::StdRng;
 use ndarray_rand::rand::{self, SeedableRng};
 
@@ -139,12 +132,8 @@ impl  Perceptron {
 
         let input_dim = x_train.ncols();
         
-        // let num_rows = x.nrows() as f32;
         
         // สุ่มเริ่มต้นค่าน้ำหนัก (Weights & Biases Initialization)
-        // let normal_dist = Normal::new(0.0, 1.0).unwrap();
-        // let w1_std = (2.0 / (x.ncols() + self.m) as f32).sqrt();
-        // let w2_std = (2.0 / (self.m + num_class) as f32).sqrt();
         let fn_std_w1 = (2.0 / (input_dim + self.m) as f32).sqrt();
         let fn_std_w2 = (2.0 / (input_dim + self.m) as f32).sqrt();
         let fn_std_w3 = (2.0 / (self.m + num_class) as f32).sqrt();
@@ -156,8 +145,6 @@ impl  Perceptron {
         self.w3 = Array2::random_using((self.m, num_class), Normal::new(0.0, fn_std_w3).unwrap(), &mut rng);
         self.b3 = Array1::zeros(num_class);
 
-        // self.entropy.clear();
-        // self.kernel.clear();
         let n_train = x_train.nrows() as f32;
         let n_val = x_val.nrows() as f32;
         let n_test = x_test.nrows() as f32;
@@ -174,7 +161,6 @@ impl  Perceptron {
             // คำนวณ Loss (Entropy)
             let j_train = ha_entropy(&z_train_one_hot, &h3);
             let acc_train = self.calculate_accuracy(&h3, z_train);
-            // self.entropy.push(j);
 
             // Backpropagation (คำนวณ Gradient)
             let ga3 = (&h3 - &z_train_one_hot) / n_train;
@@ -255,7 +241,7 @@ impl  Perceptron {
         let root = BitMapBackend::new(filename, (1200, 500)).into_drawing_area();
         root.fill(&WHITE)?;
         let sub_areas = root.split_horizontally(600);
-        // --- 1. พลอตกราฟ Loss ทางด้านซ้าย ---
+        // --- พลอตกราฟ Loss ทางด้านซ้าย ---
         let area_loss = &sub_areas.0;
         let max_loss = self.entropy_train.iter().chain(&self.entropy_val).fold(f32::NEG_INFINITY, |m, &v| m.max(v)) * 1.1;
         let mut chart_loss = ChartBuilder::on(area_loss)
@@ -278,7 +264,7 @@ impl  Perceptron {
             .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
         chart_loss.configure_series_labels().background_style(&WHITE.mix(0.8)).draw()?;
 
-        // --- 2. พลอตกราฟ Accuracy ทางด้านขวา ---
+        // --- พลอตกราฟ Accuracy ทางด้านขวา ---
         let area_acc = &sub_areas.1;
         let mut chart_acc = ChartBuilder::on(area_acc)
             .caption("Accuracy history", ("sans-serif",20))
@@ -305,7 +291,6 @@ impl  Perceptron {
             .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
         
         chart_acc.configure_series_labels().background_style(&WHITE.mix(0.8)).draw()?;
-
         
         root.present()?;
         println!("save filed : '{}'", filename);
@@ -326,7 +311,6 @@ fn plot_intput_scatter (
     let x_min = x_train.column(0).fold(f32::INFINITY, |m, &v| m.min(v)) * 0.9;
     let y_max = x_train.column(1).fold(f32::NEG_INFINITY, |m, &v| m.max(v)) * 1.1;
     let y_min = x_train.column(1).fold(f32::INFINITY, |m, &v| m.min(v)) * 0.9;
-
     
     let mut chart = ChartBuilder::on(&root)
         .caption("Input (train set)", ("sans-serif", 24))
@@ -335,7 +319,7 @@ fn plot_intput_scatter (
         .y_label_area_size(40)
         .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
 
-    chart.configure_mesh().disable_mesh().draw()?;
+    chart.configure_mesh().disable_mesh().x_desc("").y_desc("").draw()?;
 
     for i in 0..x_train.nrows() {
         let px = x_train[[i, 0]];
@@ -347,12 +331,13 @@ fn plot_intput_scatter (
             1 => RGBColor(0, 255, 0).mix(0.7),
             _ => RGBColor(0, 0,255).mix(0.7),
         };
+        //body circle
         chart.draw_series(std::iter::once(Circle::new(
             (px, py),
             4,
             dot_color.filled(),
         )))?;
-
+        //edge Circle
         chart.draw_series(std::iter::once(Circle::new(
             (px, py),
             4,
@@ -370,24 +355,22 @@ fn plot_intput_scatter (
 
 
 fn main() {
-    // 1. ระบุชื่อไฟล์ตรงๆ เป็น .data
     let file_path = "data/iris.data";
     let file = File::open(file_path).expect("file data not fond");
-    // จุดเปลี่ยนสำคัญ: ตั้งค่าเป็น false เพราะไฟล์ .data ส่วนใหญ่ไม่มีบรรทัดหัวข้อ (Header)
+    // ตั้งค่าเป็น false เพราะไฟล์ .data ส่วนใหญ่ไม่มีบรรทัดหัวข้อ (Header)
     let mut reader = ReaderBuilder::new()
         .has_headers(false)
         .from_reader(file);
-    // 2. โหลดข้อมูลทั้งหมดเข้า Matrix (สมมติว่าคอลัมน์สุดท้ายเป็นตัวเลขคลาส 0.0, 1.0, 2.0 ไว้แล้ว)
+    //  โหลดข้อมูลทั้งหมดเข้า Matrix 
     let raw_dataset: Array2<String> = reader
         .deserialize_array2_dynamic()
         .expect("failed to deserialize dataset");
 
     println!("load succusfully : {:?}", raw_dataset.dim());
     let num_rows = raw_dataset.nrows();
-
+    // หา class ที่ไม่ซ้ำกันทั้งหมด แล้วสร้าง mapping label -> index
     let mut label_map: HashMap<String, f32> = HashMap::new();
     let mut next_id: f32 = 0.0;
-    
     for i in 0..num_rows {
         let label = raw_dataset[[i, 4]].trim().to_string();
         if !label_map.contains_key(&label) {
@@ -395,7 +378,7 @@ fn main() {
             next_id += 1.0;
         }
     }
-    
+    // ใช้ mapping นี้แปลงข้อมูลจริง
     let mut x = Array2::<f32>::zeros((num_rows, 4));
     let mut z = Array1::<f32>::zeros(num_rows);
 
@@ -411,7 +394,7 @@ fn main() {
     // println!("Z: {:?}", z);
 
     let mut indices: Vec<usize>  = (0..num_rows).collect();
-    let mut rng = rand::rng();
+    let mut rng = rand::rng();      //StdRng::seed_from_u64(42);
     indices.shuffle(&mut rng);
     
     let mut shuffled_x = Array2::<f32>::zeros(x.raw_dim());
@@ -424,7 +407,7 @@ fn main() {
     let test_size = 25;
     let val_size = 25;
     let train_size = num_rows - test_size - val_size;
-
+    // ตัดดึงช่วงข้อมูลแบบสไลด์ (Slicing)
     let x_train = shuffled_x.slice(s![0..train_size, ..]).to_owned();
     let z_train = shuffled_z.slice(s![0..train_size]).to_owned();
 
@@ -434,6 +417,10 @@ fn main() {
     let x_test = shuffled_x.slice(s![(train_size + val_size).., ..]).to_owned();
     let z_test = shuffled_z.slice(s![(train_size + val_size)..]).to_owned();
 
+    // println!("  - Train set : X={:?}, Z={:?}", x_train.dim(), z_train.dim());
+    // println!("  - Val set   : X={:?}, Z={:?}", x_val.dim(), z_val.dim());
+    // println!("  - Test set  : X={:?}, Z={:?}", x_test.dim(), z_test.dim());
+        
     let mut model = Perceptron::new(4, 0.03);
     
     model.training(&x_train, &z_train, &x_val, &z_val, &x_test, &z_test, 5000);
