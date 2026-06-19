@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+csv = "1.4.0"
+ndarray = "0.17.2"
+ndarray-csv = "0.5.4"
+ndarray-rand = "0.16.0"
+plotters = "0.3.7"
+rand = "0.10.1"
